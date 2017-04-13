@@ -1,4 +1,4 @@
-import csv, requests, time
+import csv, requests, time, sys
 from bs4 import BeautifulSoup as bs
 from lxml import etree
 import xml.etree.ElementTree as ET
@@ -8,8 +8,18 @@ from yattag import Doc
 import datetime
 
 #the input csv file is a list of xml source sites and their relative attributes
+if len(sys.argv) > 1:
+	elenco_albi = sys.argv[1]
+else:
+	elenco_albi = "elenco_albi_trial.csv"
 
-with open ("elenco_albi.csv", "rb") as csvfile:
+#the output xmls
+if len(sys.argv) > 2:
+	output_dir = sys.argv[2]
+else:
+	output_dir = "./"
+
+with open (elenco_albi, "rb") as csvfile:
 	reader = csv.reader(csvfile)
 	reader.next() # Skip the header row
 	for line in reader:
@@ -36,6 +46,7 @@ with open ("elenco_albi.csv", "rb") as csvfile:
 		channel_category_name = line[19]
 		channel_category_uid = line[20]
 		time_format = line[21]
+		channel_category_webmaster = line[22]
 
 		def clean_date(x):
 			try:
@@ -53,6 +64,7 @@ with open ("elenco_albi.csv", "rb") as csvfile:
 		pubEnd_list = []
 		uid_list = []
 		type_list = []
+		guid_list = []
 		
 		raw_datalist = []
 
@@ -76,6 +88,7 @@ with open ("elenco_albi.csv", "rb") as csvfile:
 			#get hrefs
 			href_tags = page.findall(href_xpath)
 			for item in href_tags:
+				guid_list.append(item.get('id'))
 				href_clean = partial_url + item.get('id').encode('utf-8')
 				href_list.append(href_clean)
 
@@ -99,7 +112,7 @@ with open ("elenco_albi.csv", "rb") as csvfile:
 			for item in tyep_tags:
 				type_list.append(item.text.encode('utf-8'))
 
-			raw_datalist = zip(title_list, href_list, pubDate_list, pubEnd_list, uid_list, type_list)
+			raw_datalist = zip(title_list, href_list, pubDate_list, pubEnd_list, uid_list, type_list, guid_list)
 			#print raw_datalist
 
 		def generate_csv():
@@ -130,19 +143,20 @@ with open ("elenco_albi.csv", "rb") as csvfile:
 						line('category', channel_category_country, domain="http://albopop.it/specs#channel-category-country")
 						line('category', channel_category_name, domain="http://albopop.it/specs#channel-category-name")
 						line('category', channel_category_uid, domain="http://albopop.it/specs#channel-category-uid")
+						line('webMaster', channel_category_webmaster)
 						for row in raw_datalist:
 			   				with tag('item'):
 			   					line('title', row[0])
 			   					line('link', row[1])
-			   					line('description', row[0]) #TODO
+			   					line('description', row[0])
 			   					line('pubDate', row[2])
-			   					line('guid', row[1]) #TODO
+			   					line('guid', row[6], isPermaLink="true")
 			   					line('category', row[2], domain="http://albopop.it/specs#item-category-pubStart")
 			   					line('category', row[3], domain="http://albopop.it/specs#item-category-pubEnd")
 			   					line('category', row[4], domain="http://albopop.it/specs#item-category-uid")
 			   					line('category', row[5], domain="http://albopop.it/specs#item-category-type")
 		 	#print(doc.getvalue())
-		 	with open(albo+'_feed.xml','wf') as f:
+		 	with open(output_dir+'/'+albo+'_feed.xml','wf') as f:
 		 		f.write(doc.getvalue())
 		open_page()
 		scrape_data()
