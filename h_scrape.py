@@ -11,7 +11,7 @@ import datetime
 if len(sys.argv) > 1:
 	elenco_albi = sys.argv[1]
 else:
-	elenco_albi = "elenco_albi_trial.csv"
+	elenco_albi = "elenco_albi.csv"
 
 #the output xmls
 if len(sys.argv) > 2:
