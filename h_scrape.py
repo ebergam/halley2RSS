@@ -11,7 +11,7 @@ import datetime
 if len(sys.argv) > 1:
 	elenco_albi = sys.argv[1]
 else:
-	elenco_albi = "elenco_albi.csv"
+	elenco_albi = "elenco_albi_trial.csv"
 
 #the output xmls
 if len(sys.argv) > 2:
@@ -47,6 +47,7 @@ with open (elenco_albi, "rb") as csvfile:
 		channel_category_uid = line[20]
 		time_format = line[21]
 		channel_category_webmaster = line[22]
+		current_date = datetime.date.today().strftime("%a, %d %b %Y %H:%M:%S %z +0200")
 
 		def clean_date(x):
 			try:
@@ -130,9 +131,10 @@ with open (elenco_albi, "rb") as csvfile:
 				):
 					with tag('channel'):
 						line('title', RSS_title)
-						line('link', RSS_link) #TODO
+						line('link', RSS_link)
 						line('description', RSS_description)
 						line('language', 'it')
+						line('pubDate', current_date)
 						line('docs', 'http://albopop.it/comune/') #TODO
 						line('category', channel_category_type, domain="http://albopop.it/specs#channel-category-type")
 						line('category', channel_category_municipality, domain="http://albopop.it/specs#channel-category-municipality")
