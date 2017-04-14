@@ -1,4 +1,4 @@
-import csv, requests, time, sys
+import csv, requests, time, sys, re
 from bs4 import BeautifulSoup as bs
 from lxml import etree
 import xml.etree.ElementTree as ET
@@ -48,6 +48,15 @@ with open (elenco_albi, "rb") as csvfile:
 		time_format = line[21]
 		channel_category_webmaster = line[22]
 		current_date = datetime.date.today().strftime("%a, %d %b %Y %H:%M:%S %z +0200")
+		halley_code = line[23]
+		print albo
+		def clean_title(x):
+			match = re.search(r'^">', x)
+			if match:
+				x = re.sub(r'^">', '', x)
+				return x
+			else:
+				return x
 
 		def clean_date(x):
 			try:
@@ -59,6 +68,12 @@ with open (elenco_albi, "rb") as csvfile:
 				clean_d = datetime.date.today().strftime("%a, %d %b %Y %H:%M:%S %z +0200") #METODO DA MIGLIORARE
 				return clean_d
 
+		def clean_detail_link(x):
+				match = re.search(r'\'(.*?)\'', str(x))
+				if match:
+					x = match.group().replace("'","")
+				return x
+
 		title_list = []
 		href_list = []
 		pubDate_list = []
@@ -66,7 +81,7 @@ with open (elenco_albi, "rb") as csvfile:
 		uid_list = []
 		type_list = []
 		guid_list = []
-		
+		details_list_of_lists = []
 		raw_datalist = []
 
 		def open_page():
@@ -83,15 +98,23 @@ with open (elenco_albi, "rb") as csvfile:
 			title_tags = page.findall(title_xpath)
 			for item in title_tags:
 				rawname = bs(item.text.encode('utf-8'), "xml")
-				clean_item = rawname.find('a').text
-				title_list.append(clean_item.encode('utf-8'))
+				title_item = rawname.find('a').text
+				title_list.append(title_item.encode('utf-8'))
 
-			#get hrefs
+			#get hrefs and details
 			href_tags = page.findall(href_xpath)
 			for item in href_tags:
 				guid_list.append(item.get('id'))
 				href_clean = partial_url + item.get('id').encode('utf-8')
 				href_list.append(href_clean)
+				detail_res = requests.get(href_clean)
+				detail_page = bs(detail_res.text,"lxml")
+				detail_tags = detail_page.find_all('a')
+				detail_link_list = []
+				for a in detail_tags:
+					detail_link_url = "http://halleyweb.com/"+halley_code+"/mc/"+clean_detail_link(a['onclick'])
+					detail_link_list.append(detail_link_url)
+				details_list_of_lists.append(detail_link_list)
 
 			#get pubdates
 			pubDate_tags = page.findall(pubDate_xpath)
@@ -113,9 +136,9 @@ with open (elenco_albi, "rb") as csvfile:
 			for item in tyep_tags:
 				type_list.append(item.text.encode('utf-8'))
 
-			raw_datalist = zip(title_list, href_list, pubDate_list, pubEnd_list, uid_list, type_list, guid_list)
+			raw_datalist = zip(title_list, href_list, pubDate_list, pubEnd_list, uid_list, type_list, guid_list, details_list_of_lists)
 			#print raw_datalist
-
+			
 		def generate_csv():
 			with open(albo +'_data.csv', 'wb') as f:	
 				writer = csv.writer(f)
@@ -152,11 +175,13 @@ with open (elenco_albi, "rb") as csvfile:
 			   					line('link', row[1])
 			   					line('description', row[0])
 			   					line('pubDate', row[2])
-			   					line('guid', row[6], isPermaLink="true")
+			   					line('guid', row[6], isPermaLink='false')
 			   					line('category', row[2], domain="http://albopop.it/specs#item-category-pubStart")
 			   					line('category', row[3], domain="http://albopop.it/specs#item-category-pubEnd")
 			   					line('category', row[4], domain="http://albopop.it/specs#item-category-uid")
 			   					line('category', row[5], domain="http://albopop.it/specs#item-category-type")
+			   					for link in row[7]:
+			   						doc.stag('enclosure', url=str(link), length="3000", type="application/pdf")
 		 	#print(doc.getvalue())
 		 	with open(output_dir+'/'+albo+'_feed.xml','wf') as f:
 		 		f.write(doc.getvalue())
