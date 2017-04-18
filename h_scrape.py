@@ -175,7 +175,7 @@ with open (elenco_albi, "rb") as csvfile:
 			   					line('link', row[1])
 			   					line('description', row[0])
 			   					line('pubDate', row[2])
-			   					line('guid', row[6], isPermaLink='false')
+			   					line('guid', row[1], isPermaLink='true')
 			   					line('category', row[2], domain="http://albopop.it/specs#item-category-pubStart")
 			   					line('category', row[3], domain="http://albopop.it/specs#item-category-pubEnd")
 			   					line('category', row[4], domain="http://albopop.it/specs#item-category-uid")
